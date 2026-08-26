@@ -4,35 +4,66 @@
 #include <string>
 
 enum class TokenType {
-    KEYWORD,
+    // Keywords
+    BREW,
+    SERVE,
+    SIP,
+    IF,
+    ELSE,
+    WHILE,
+    RETURN,
+    HOT,
+    COLD,
+
+    // Data types
+    INT_TYPE,
+    FLOAT_TYPE,
+    CHAR_TYPE,
+    BOOL_TYPE,
+    STRING_TYPE,
+
+    // Identifiers and literals
     IDENTIFIER,
-    INTEGER,
-    FLOAT,
-    CHAR,
-    BOOLEAN,
-    OPERATOR,
-    DELIMITER,
-    STRING,
-    EOF_TOKEN, // Use EOF_TOKEN to avoid conflicts with standard C EOF macro
+    INTEGER_LITERAL,
+    FLOAT_LITERAL,
+    CHAR_LITERAL,
+    STRING_LITERAL,
+    BOOLEAN_LITERAL,
+
+    // Operators
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    MODULO,
+
+    ASSIGN,
+    EQUAL,
+    NOT_EQUAL,
+    LESS,
+    GREATER,
+    LESS_EQUAL,
+    GREATER_EQUAL,
+
+    AND,
+    OR,
+    NOT,
+
+    INCREMENT,
+    DECREMENT,
+
+    // Delimiters
+    LEFT_PAREN,
+    RIGHT_PAREN,
+    LEFT_BRACE,
+    RIGHT_BRACE,
+    SEMICOLON,
+    COMMA,
+
+    // Special
+    END_OF_FILE,
     INVALID
 };
-
-inline std::string tokenTypeToString(TokenType type) {
-    switch (type) {
-        case TokenType::KEYWORD: return "KEYWORD";
-        case TokenType::IDENTIFIER: return "IDENTIFIER";
-        case TokenType::INTEGER: return "INTEGER";
-        case TokenType::FLOAT: return "FLOAT";
-        case TokenType::CHAR: return "CHAR";
-        case TokenType::BOOLEAN: return "BOOLEAN";
-        case TokenType::OPERATOR: return "OPERATOR";
-        case TokenType::DELIMITER: return "DELIMITER";
-        case TokenType::STRING: return "STRING";
-        case TokenType::EOF_TOKEN: return "EOF";
-        case TokenType::INVALID: return "INVALID";
-        default: return "UNKNOWN";
-    }
-}
 
 struct Token {
     TokenType type;
@@ -40,8 +71,10 @@ struct Token {
     int line;
     int column;
 
-    Token(TokenType type, std::string lexeme, int line, int column)
-        : type(type), lexeme(lexeme), line(line), column(column) {}
+    Token(TokenType t, const std::string& l, int ln, int col)
+        : type(t), lexeme(l), line(ln), column(col) {}
 };
 
-#endif // TOKEN_H
+std::string tokenTypeToString(TokenType type);
+
+#endif

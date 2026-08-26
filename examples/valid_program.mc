@@ -1,23 +1,15 @@
-int main() {
-    int a = 10;
-    int b = 20;
-    int c = a + b * 2;
-    float d = 3.14;
-    bool isGreater = c > 30;
-    char grade = 'A';
+brew marks = 78;
+brew attendance = 85;
 
-    // Conditional branches
-    if (isGreater && c != 50) {
-        print(c);
-    } else {
-        print(0);
-    }
-
-    // While loop execution
-    while (a > 0) {
-        print(a);
-        a--;
-    }
-
-    return 0;
+if (marks >= 40) {
+    serve("Pass");
+} else {
+    serve("Fail");
 }
+
+while (attendance > 80) {
+    serve("Good Attendance");
+    attendance = attendance - 5;
+}
+
+serve("Program Finished");

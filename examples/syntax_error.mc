@@ -1,12 +1,5 @@
-int main() {
-    int a = 10 // Missing semicolon
-    int a = 20; // Redeclaration error
+brew marks = ;
 
-    while (a > 0 { // Missing right parenthesis
-        print(a);
-        a--;
-    }
-
-    undeclaredVar = 40; // Undeclared variable error
-    return 0;
+if (marks >= 40 {
+    serve("Pass");
 }

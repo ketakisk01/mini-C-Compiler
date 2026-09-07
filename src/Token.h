@@ -3,7 +3,8 @@
 
 #include <string>
 
-enum class TokenType {
+enum class TokenType
+{
     // Keywords
     BREW,
     SERVE,
@@ -36,7 +37,6 @@ enum class TokenType {
     MULTIPLY,
     DIVIDE,
     MODULO,
-
     ASSIGN,
     EQUAL,
     NOT_EQUAL,
@@ -44,11 +44,9 @@ enum class TokenType {
     GREATER,
     LESS_EQUAL,
     GREATER_EQUAL,
-
     AND,
     OR,
     NOT,
-
     INCREMENT,
     DECREMENT,
 
@@ -65,14 +63,22 @@ enum class TokenType {
     INVALID
 };
 
-struct Token {
+struct Token
+{
     TokenType type;
     std::string lexeme;
     int line;
     int column;
 
-    Token(TokenType t, const std::string& l, int ln, int col)
-        : type(t), lexeme(l), line(ln), column(col) {}
+    Token(
+        TokenType t,
+        const std::string& l,
+        int ln,
+        int col
+    )
+        : type(t), lexeme(l), line(ln), column(col)
+    {
+    }
 };
 
 std::string tokenTypeToString(TokenType type);

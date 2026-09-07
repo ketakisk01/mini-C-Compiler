@@ -5,30 +5,25 @@
 #include <string>
 #include <vector>
 
-class Lexer {
+class Lexer
+{
 private:
     std::string source;
 
-    size_t position;
+    size_t current;
     int line;
     int column;
 
-    char currentChar();
+    char peek();
+    char peekNext();
+    char advance();
 
-    void advance();
-
-    void skipWhitespace();
-
-    void skipComment();
+    void skipWhitespaceAndComments();
 
     Token scanIdentifierOrKeyword();
-
     Token scanNumber();
-
     Token scanString();
-
-    Token scanCharacter();
-
+    Token scanChar();
     Token scanOperatorOrDelimiter();
 
 public:

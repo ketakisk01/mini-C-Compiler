@@ -1,149 +1,103 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 #include "Lexer.h"
 #include "Parser.h"
 #include "SymbolTable.h"
 
-#include <fstream>
-#include <iostream>
-#include <sstream>
+using namespace std;
 
-int main(int argc, char* argv[]) {
-
-    std::cout
-        << "========================================\n"
-        << "          COFFEE++ COMPILER\n"
-        << "========================================\n\n";
-
-    if (argc < 2) {
-
-        std::cout
-            << "Usage:\n"
-            << "  MiniCCompiler.exe <source-file>\n\n";
-
-        std::cout
-            << "Example:\n"
-            << "  MiniCCompiler.exe examples\\valid_program.mc\n";
-
+int main(int argc, char* argv[])
+{
+    // Check command-line argument
+    if (argc < 2)
+    {
+        cout << "Usage: MiniCCompiler.exe <source_file>\n";
         return 1;
     }
 
-    std::string filename = argv[1];
+    // Open source file
+    ifstream file(argv[1]);
 
-    std::ifstream file(filename);
-
-    if (!file.is_open()) {
-
-        std::cerr
-            << "Error: Cannot open file: "
-            << filename
-            << "\n";
-
+    if (!file)
+    {
+        cerr << "Error: Cannot open source file.\n";
         return 1;
     }
 
-    std::stringstream buffer;
-
+    // Read complete source code
+    stringstream buffer;
     buffer << file.rdbuf();
 
-    std::string sourceCode = buffer.str();
+    string sourceCode = buffer.str();
 
-    file.close();
-
-    std::cout
-        << "Input File: "
-        << filename
-        << "\n\n";
-
-    // ==============================
-    // LEXICAL ANALYSIS
-    // ==============================
-
-    std::cout
-        << "========== LEXICAL ANALYSIS ==========\n";
+    // 1. LEXICAL ANALYSIS
 
     Lexer lexer(sourceCode);
 
-    std::vector<Token> tokens = lexer.tokenize();
+    vector<Token> tokens = lexer.tokenize();
 
-    bool lexicalError = false;
+    cout << "\n========== TOKENS ==========\n";
 
-    std::cout
-        << "\n"
-        << "Type\t\tLexeme\t\tLine\tColumn\n";
+    for (const auto& token : tokens)
+    {
+        cout << tokenTypeToString(token.type)
+             << " : "
+             << token.lexeme
+             << "  (Line "
+             << token.line
+             << ", Column "
+             << token.column
+             << ")\n";
+    }
 
-    std::cout
-        << "-----------------------------------------------\n";
+    cout << "============================\n";
 
-    for (const Token& token : tokens) {
 
-        std::cout
-            << tokenTypeToString(token.type)
-            << "\t\t"
-            << token.lexeme
-            << "\t\t"
-            << token.line
-            << "\t"
-            << token.column
-            << "\n";
-
-        if (token.type == TokenType::INVALID) {
-            lexicalError = true;
+    // Check lexical errors
+    for (const auto& token : tokens)
+    {
+        if (token.type == TokenType::INVALID)
+        {
+            cerr << "\nLexical error found. Compilation stopped.\n";
+            return 1;
         }
     }
 
-    if (lexicalError) {
-
-        std::cerr
-            << "\nLexical analysis failed.\n";
-
-        return 1;
-    }
-
-    std::cout
-        << "\nLexical analysis successful.\n";
-
-    // ==============================
-    // SYMBOL TABLE
-    // ==============================
+    // 2. SYMBOL TABLE
 
     SymbolTable symbolTable;
 
-    // ==============================
-    // SYNTAX ANALYSIS
-    // ==============================
 
-    std::cout
-        << "\n========== SYNTAX ANALYSIS ==========\n";
+    // 3. SYNTAX ANALYSIS
 
-    Parser parser(
-        tokens,
-        symbolTable
-    );
+    Parser parser(tokens, symbolTable);
 
-    std::shared_ptr<ProgramNode> program =
-        parser.parse();
+    auto program = parser.parse();
 
-    std::cout
-        << "\nSyntax analysis completed.\n";
+    cout << "\nSyntax analysis completed successfully.\n";
 
-    // ==============================
-    // SYMBOL TABLE
-    // ==============================
+
+    // 4. SYMBOL TABLE OUTPUT
+
 
     symbolTable.print();
 
-    // ==============================
-    // AST
-    // ==============================
+    // 5. AST OUTPUT
 
-    std::cout
-        << "\n========== ABSTRACT SYNTAX TREE ==========\n";
+    cout << "\n========== ABSTRACT SYNTAX TREE ==========\n";
 
-    program->print();
+    if (program)
+    {
+        program->print();
+    }
 
-    std::cout
-        << "\n========================================\n"
-        << "       COFFEE++ COMPILATION DONE\n"
-        << "========================================\n";
+
+    // 6. PARSE TREE OUTPUT
+
+    parser.printParseTree();
+
 
     return 0;
 }

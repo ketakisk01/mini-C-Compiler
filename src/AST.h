@@ -6,7 +6,14 @@
 #include <string>
 #include <vector>
 
-class ASTNode {
+inline void printIndent(int indent)
+{
+    for (int i = 0; i < indent; i++)
+        std::cout << "  ";
+}
+
+class ASTNode
+{
 public:
     virtual ~ASTNode() = default;
 
@@ -15,71 +22,78 @@ public:
 
 using ASTPtr = std::shared_ptr<ASTNode>;
 
-inline void printIndent(int indent) {
-    for (int i = 0; i < indent; i++) {
-        std::cout << "  ";
-    }
-}
-
-class ProgramNode : public ASTNode {
+class ProgramNode : public ASTNode
+{
 public:
     std::vector<ASTPtr> statements;
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Program\n";
 
-        for (const auto& statement : statements) {
-            statement->print(indent + 1);
+        for (const auto& statement : statements)
+        {
+            if (statement)
+                statement->print(indent + 1);
         }
     }
 };
 
-class BlockNode : public ASTNode {
+class BlockNode : public ASTNode
+{
 public:
     std::vector<ASTPtr> statements;
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Block\n";
 
-        for (const auto& statement : statements) {
-            statement->print(indent + 1);
+        for (const auto& statement : statements)
+        {
+            if (statement)
+                statement->print(indent + 1);
         }
     }
 };
 
-class LiteralNode : public ASTNode {
+class LiteralNode : public ASTNode
+{
 public:
     std::string value;
 
     LiteralNode(const std::string& value)
-        : value(value) {}
+        : value(value)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Literal: " << value << "\n";
     }
 };
 
-class IdentifierNode : public ASTNode {
+class IdentifierNode : public ASTNode
+{
 public:
     std::string name;
 
     IdentifierNode(const std::string& name)
-        : name(name) {}
+        : name(name)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Identifier: " << name << "\n";
     }
 };
 
-class DeclarationNode : public ASTNode {
+class DeclarationNode : public ASTNode
+{
 public:
     std::string name;
     ASTPtr initializer;
@@ -89,20 +103,22 @@ public:
         ASTPtr initializer
     )
         : name(name),
-          initializer(initializer) {}
+          initializer(initializer)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Declaration: " << name << "\n";
 
-        if (initializer) {
+        if (initializer)
             initializer->print(indent + 1);
-        }
     }
 };
 
-class AssignmentNode : public ASTNode {
+class AssignmentNode : public ASTNode
+{
 public:
     std::string name;
     ASTPtr expression;
@@ -112,18 +128,22 @@ public:
         ASTPtr expression
     )
         : name(name),
-          expression(expression) {}
+          expression(expression)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Assignment: " << name << "\n";
 
-        expression->print(indent + 1);
+        if (expression)
+            expression->print(indent + 1);
     }
 };
 
-class BinaryExpressionNode : public ASTNode {
+class BinaryExpressionNode : public ASTNode
+{
 public:
     std::string op;
     ASTPtr left;
@@ -136,19 +156,25 @@ public:
     )
         : op(op),
           left(left),
-          right(right) {}
+          right(right)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Binary Operator: " << op << "\n";
 
-        left->print(indent + 1);
-        right->print(indent + 1);
+        if (left)
+            left->print(indent + 1);
+
+        if (right)
+            right->print(indent + 1);
     }
 };
 
-class UnaryExpressionNode : public ASTNode {
+class UnaryExpressionNode : public ASTNode
+{
 public:
     std::string op;
     ASTPtr operand;
@@ -158,18 +184,22 @@ public:
         ASTPtr operand
     )
         : op(op),
-          operand(operand) {}
+          operand(operand)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Unary Operator: " << op << "\n";
 
-        operand->print(indent + 1);
+        if (operand)
+            operand->print(indent + 1);
     }
 };
 
-class IfNode : public ASTNode {
+class IfNode : public ASTNode
+{
 public:
     ASTPtr condition;
     ASTPtr thenBranch;
@@ -182,34 +212,38 @@ public:
     )
         : condition(condition),
           thenBranch(thenBranch),
-          elseBranch(elseBranch) {}
+          elseBranch(elseBranch)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "If\n";
 
         printIndent(indent + 1);
-        std::cout << "Condition:\n";
+        std::cout << "Condition\n";
 
-        condition->print(indent + 2);
+        if (condition)
+            condition->print(indent + 2);
 
         printIndent(indent + 1);
-        std::cout << "Then:\n";
+        std::cout << "Then\n";
 
-        thenBranch->print(indent + 2);
+        if (thenBranch)
+            thenBranch->print(indent + 2);
 
-        if (elseBranch) {
-
+        if (elseBranch)
+        {
             printIndent(indent + 1);
-            std::cout << "Else:\n";
-
+            std::cout << "Else\n";
             elseBranch->print(indent + 2);
         }
     }
 };
 
-class WhileNode : public ASTNode {
+class WhileNode : public ASTNode
+{
 public:
     ASTPtr condition;
     ASTPtr body;
@@ -219,70 +253,77 @@ public:
         ASTPtr body
     )
         : condition(condition),
-          body(body) {}
+          body(body)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "While\n";
 
-        printIndent(indent + 1);
-        std::cout << "Condition:\n";
+        if (condition)
+            condition->print(indent + 1);
 
-        condition->print(indent + 2);
-
-        printIndent(indent + 1);
-        std::cout << "Body:\n";
-
-        body->print(indent + 2);
+        if (body)
+            body->print(indent + 1);
     }
 };
 
-class ServeNode : public ASTNode {
+class ServeNode : public ASTNode
+{
 public:
     ASTPtr expression;
 
     ServeNode(ASTPtr expression)
-        : expression(expression) {}
+        : expression(expression)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Serve\n";
 
-        expression->print(indent + 1);
+        if (expression)
+            expression->print(indent + 1);
     }
 };
 
-class SipNode : public ASTNode {
+class SipNode : public ASTNode
+{
 public:
     std::string name;
 
     SipNode(const std::string& name)
-        : name(name) {}
+        : name(name)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
-        std::cout << "Sip Input: " << name << "\n";
+        std::cout << "Sip: " << name << "\n";
     }
 };
 
-class ReturnNode : public ASTNode {
+class ReturnNode : public ASTNode
+{
 public:
     ASTPtr expression;
 
     ReturnNode(ASTPtr expression)
-        : expression(expression) {}
+        : expression(expression)
+    {
+    }
 
-    void print(int indent = 0) const override {
-
+    void print(int indent = 0) const override
+    {
         printIndent(indent);
         std::cout << "Return\n";
 
-        if (expression) {
+        if (expression)
             expression->print(indent + 1);
-        }
     }
 };
 

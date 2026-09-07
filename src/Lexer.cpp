@@ -1,128 +1,131 @@
 #include "Lexer.h"
-#include <cctype>
-#include <iostream>
+
 #include <unordered_map>
+#include <cctype>
+
+static const std::unordered_map<std::string, TokenType> keywords =
+{
+    {"brew", TokenType::BREW},
+    {"serve", TokenType::SERVE},
+    {"sip", TokenType::SIP},
+    {"if", TokenType::IF},
+    {"else", TokenType::ELSE},
+    {"while", TokenType::WHILE},
+    {"return", TokenType::RETURN},
+    {"hot", TokenType::BOOLEAN_LITERAL},
+    {"cold", TokenType::BOOLEAN_LITERAL},
+
+    {"int", TokenType::INT_TYPE},
+    {"float", TokenType::FLOAT_TYPE},
+    {"char", TokenType::CHAR_TYPE},
+    {"bool", TokenType::BOOL_TYPE},
+    {"string", TokenType::STRING_TYPE}
+};
 
 Lexer::Lexer(const std::string& sourceCode)
-    : source(sourceCode), position(0), line(1), column(1) {
+    : source(sourceCode),
+      current(0),
+      line(1),
+      column(1)
+{
 }
 
-char Lexer::currentChar() {
-    if (position >= source.length()) {
+char Lexer::peek()
+{
+    if (current >= source.length())
         return '\0';
-    }
 
-    return source[position];
+    return source[current];
 }
 
-void Lexer::advance() {
-    if (currentChar() == '\n') {
+char Lexer::peekNext()
+{
+    if (current + 1 >= source.length())
+        return '\0';
+
+    return source[current + 1];
+}
+
+char Lexer::advance()
+{
+    char c = peek();
+
+    if (c == '\0')
+        return '\0';
+
+    current++;
+
+    if (c == '\n')
+    {
         line++;
         column = 1;
-    } else {
+    }
+    else
+    {
         column++;
     }
 
-    position++;
+    return c;
 }
 
-void Lexer::skipWhitespace() {
-    while (currentChar() != '\0' &&
-           std::isspace(static_cast<unsigned char>(currentChar()))) {
-        advance();
-    }
-}
-
-void Lexer::skipComment() {
-
-    // Single-line comment
-    if (currentChar() == '/' &&
-        position + 1 < source.length() &&
-        source[position + 1] == '/') {
-
-        while (currentChar() != '\0' && currentChar() != '\n') {
+void Lexer::skipWhitespaceAndComments()
+{
+    while (true)
+    {
+        while (isspace(peek()))
             advance();
+
+        // Single-line comment
+        if (peek() == '/' && peekNext() == '/')
+        {
+            while (peek() != '\n' && peek() != '\0')
+                advance();
+
+            continue;
         }
 
-        return;
-    }
+        // Multi-line comment
+        if (peek() == '/' && peekNext() == '*')
+        {
+            advance();
+            advance();
 
-    // Multi-line comment
-    if (currentChar() == '/' &&
-        position + 1 < source.length() &&
-        source[position + 1] == '*') {
-
-        advance();
-        advance();
-
-        while (currentChar() != '\0') {
-
-            if (currentChar() == '*' &&
-                position + 1 < source.length() &&
-                source[position + 1] == '/') {
-
+            while (!(peek() == '*' && peekNext() == '/') &&
+                   peek() != '\0')
+            {
                 advance();
-                advance();
-                return;
             }
 
-            advance();
+            if (peek() == '*' && peekNext() == '/')
+            {
+                advance();
+                advance();
+            }
+
+            continue;
         }
 
-        std::cerr << "Lexical Error: Unterminated comment\n";
+        break;
     }
 }
 
-Token Lexer::scanIdentifierOrKeyword() {
-
+Token Lexer::scanIdentifierOrKeyword()
+{
     int startLine = line;
     int startColumn = column;
 
-    std::string lexeme;
+    std::string text;
 
-    while (std::isalnum(static_cast<unsigned char>(currentChar())) ||
-           currentChar() == '_') {
+    while (isalnum(peek()) || peek() == '_')
+        text += advance();
 
-        lexeme += currentChar();
-        advance();
-    }
+    auto it = keywords.find(text);
 
-    static const std::unordered_map<std::string, TokenType> keywords = {
-
-        {"brew", TokenType::BREW},
-        {"serve", TokenType::SERVE},
-        {"sip", TokenType::SIP},
-        {"if", TokenType::IF},
-        {"else", TokenType::ELSE},
-        {"while", TokenType::WHILE},
-        {"return", TokenType::RETURN},
-
-        {"hot", TokenType::HOT},
-        {"cold", TokenType::COLD},
-
-        {"int", TokenType::INT_TYPE},
-        {"float", TokenType::FLOAT_TYPE},
-        {"char", TokenType::CHAR_TYPE},
-        {"bool", TokenType::BOOL_TYPE},
-        {"string", TokenType::STRING_TYPE}
-    };
-
-    auto it = keywords.find(lexeme);
-
-    if (it != keywords.end()) {
-
-        if (lexeme == "hot" || lexeme == "cold") {
-            return Token(
-                TokenType::BOOLEAN_LITERAL,
-                lexeme,
-                startLine,
-                startColumn
-            );
-        }
-
+    if (it != keywords.end())
+    {
         return Token(
             it->second,
-            lexeme,
+            text,
             startLine,
             startColumn
         );
@@ -130,384 +133,292 @@ Token Lexer::scanIdentifierOrKeyword() {
 
     return Token(
         TokenType::IDENTIFIER,
-        lexeme,
+        text,
         startLine,
         startColumn
     );
 }
 
-Token Lexer::scanNumber() {
-
+Token Lexer::scanNumber()
+{
     int startLine = line;
     int startColumn = column;
 
-    std::string lexeme;
-    bool hasDecimal = false;
+    std::string number;
+    bool isFloat = false;
 
-    while (std::isdigit(static_cast<unsigned char>(currentChar()))) {
+    while (isdigit(peek()))
+        number += advance();
 
-        lexeme += currentChar();
-        advance();
-    }
+    if (peek() == '.' && isdigit(peekNext()))
+    {
+        isFloat = true;
+        number += advance();
 
-    if (currentChar() == '.') {
-
-        hasDecimal = true;
-
-        lexeme += currentChar();
-        advance();
-
-        while (std::isdigit(static_cast<unsigned char>(currentChar()))) {
-
-            lexeme += currentChar();
-            advance();
-        }
-    }
-
-    if (hasDecimal) {
-
-        return Token(
-            TokenType::FLOAT_LITERAL,
-            lexeme,
-            startLine,
-            startColumn
-        );
-
+        while (isdigit(peek()))
+            number += advance();
     }
 
     return Token(
-        TokenType::INTEGER_LITERAL,
-        lexeme,
+        isFloat
+            ? TokenType::FLOAT_LITERAL
+            : TokenType::INTEGER_LITERAL,
+        number,
         startLine,
         startColumn
     );
 }
 
-Token Lexer::scanString() {
-
+Token Lexer::scanString()
+{
     int startLine = line;
     int startColumn = column;
 
-    std::string lexeme;
+    advance(); // opening "
 
-    // Skip opening "
-    advance();
+    std::string value;
 
-    while (currentChar() != '"' && currentChar() != '\0') {
+    while (peek() != '"' && peek() != '\0')
+        value += advance();
 
-        if (currentChar() == '\n') {
-
-            std::cerr
-                << "Lexical Error at line "
-                << line
-                << ": Unterminated string\n";
-
-            break;
-        }
-
-        lexeme += currentChar();
+    if (peek() == '"')
+    {
         advance();
-    }
 
-    if (currentChar() == '"') {
-        advance();
+        return Token(
+            TokenType::STRING_LITERAL,
+            value,
+            startLine,
+            startColumn
+        );
     }
 
     return Token(
-        TokenType::STRING_LITERAL,
-        lexeme,
+        TokenType::INVALID,
+        value,
         startLine,
         startColumn
     );
 }
 
-Token Lexer::scanCharacter() {
-
+Token Lexer::scanChar()
+{
     int startLine = line;
     int startColumn = column;
 
-    std::string lexeme;
+    advance(); // opening '
 
-    // Skip opening '
-    advance();
+    std::string value;
 
-    if (currentChar() != '\0' &&
-        currentChar() != '\'' &&
-        currentChar() != '\n') {
+    if (peek() != '\'' && peek() != '\0')
+        value += advance();
 
-        lexeme += currentChar();
+    if (peek() == '\'')
+    {
         advance();
 
-    } else {
-
-        std::cerr
-            << "Lexical Error at line "
-            << line
-            << ", column "
-            << column
-            << ": Invalid character literal\n";
-    }
-
-    if (currentChar() == '\'') {
-        advance();
+        return Token(
+            TokenType::CHAR_LITERAL,
+            value,
+            startLine,
+            startColumn
+        );
     }
 
     return Token(
-        TokenType::CHAR_LITERAL,
-        lexeme,
+        TokenType::INVALID,
+        value,
         startLine,
         startColumn
     );
 }
 
-Token Lexer::scanOperatorOrDelimiter() {
-
+Token Lexer::scanOperatorOrDelimiter()
+{
     int startLine = line;
     int startColumn = column;
 
-    char c = currentChar();
-    char next = '\0';
+    char c = advance();
 
-    if (position + 1 < source.length()) {
-        next = source[position + 1];
-    }
-
-    // Two-character operators
-
-    if (c == '=' && next == '=') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::EQUAL,
-            "==",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '!' && next == '=') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::NOT_EQUAL,
-            "!=",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '<' && next == '=') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::LESS_EQUAL,
-            "<=",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '>' && next == '=') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::GREATER_EQUAL,
-            ">=",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '&' && next == '&') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::AND,
-            "&&",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '|' && next == '|') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::OR,
-            "||",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '+' && next == '+') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::INCREMENT,
-            "++",
-            startLine,
-            startColumn
-        );
-    }
-
-    if (c == '-' && next == '-') {
-
-        advance();
-        advance();
-
-        return Token(
-            TokenType::DECREMENT,
-            "--",
-            startLine,
-            startColumn
-        );
-    }
-
-    // Single-character tokens
-
-    advance();
-
-    switch (c) {
-
+    switch (c)
+    {
         case '+':
-            return Token(TokenType::PLUS, "+", startLine, startColumn);
+            if (peek() == '+')
+            {
+                advance();
+                return Token(TokenType::INCREMENT, "++",
+                             startLine, startColumn);
+            }
+            return Token(TokenType::PLUS, "+",
+                         startLine, startColumn);
 
         case '-':
-            return Token(TokenType::MINUS, "-", startLine, startColumn);
+            if (peek() == '-')
+            {
+                advance();
+                return Token(TokenType::DECREMENT, "--",
+                             startLine, startColumn);
+            }
+            return Token(TokenType::MINUS, "-",
+                         startLine, startColumn);
 
         case '*':
-            return Token(TokenType::MULTIPLY, "*", startLine, startColumn);
+            return Token(TokenType::MULTIPLY, "*",
+                         startLine, startColumn);
 
         case '/':
-            return Token(TokenType::DIVIDE, "/", startLine, startColumn);
+            return Token(TokenType::DIVIDE, "/",
+                         startLine, startColumn);
 
         case '%':
-            return Token(TokenType::MODULO, "%", startLine, startColumn);
+            return Token(TokenType::MODULO, "%",
+                         startLine, startColumn);
 
         case '=':
-            return Token(TokenType::ASSIGN, "=", startLine, startColumn);
-
-        case '<':
-            return Token(TokenType::LESS, "<", startLine, startColumn);
-
-        case '>':
-            return Token(TokenType::GREATER, ">", startLine, startColumn);
+            if (peek() == '=')
+            {
+                advance();
+                return Token(TokenType::EQUAL, "==",
+                             startLine, startColumn);
+            }
+            return Token(TokenType::ASSIGN, "=",
+                         startLine, startColumn);
 
         case '!':
-            return Token(TokenType::NOT, "!", startLine, startColumn);
+            if (peek() == '=')
+            {
+                advance();
+                return Token(TokenType::NOT_EQUAL, "!=",
+                             startLine, startColumn);
+            }
+            return Token(TokenType::NOT, "!",
+                         startLine, startColumn);
+
+        case '<':
+            if (peek() == '=')
+            {
+                advance();
+                return Token(TokenType::LESS_EQUAL, "<=",
+                             startLine, startColumn);
+            }
+            return Token(TokenType::LESS, "<",
+                         startLine, startColumn);
+
+        case '>':
+            if (peek() == '=')
+            {
+                advance();
+                return Token(TokenType::GREATER_EQUAL, ">=",
+                             startLine, startColumn);
+            }
+            return Token(TokenType::GREATER, ">",
+                         startLine, startColumn);
+
+        case '&':
+            if (peek() == '&')
+            {
+                advance();
+                return Token(TokenType::AND, "&&",
+                             startLine, startColumn);
+            }
+            break;
+
+        case '|':
+            if (peek() == '|')
+            {
+                advance();
+                return Token(TokenType::OR, "||",
+                             startLine, startColumn);
+            }
+            break;
 
         case '(':
-            return Token(TokenType::LEFT_PAREN, "(", startLine, startColumn);
+            return Token(TokenType::LEFT_PAREN, "(",
+                         startLine, startColumn);
 
         case ')':
-            return Token(TokenType::RIGHT_PAREN, ")", startLine, startColumn);
+            return Token(TokenType::RIGHT_PAREN, ")",
+                         startLine, startColumn);
 
         case '{':
-            return Token(TokenType::LEFT_BRACE, "{", startLine, startColumn);
+            return Token(TokenType::LEFT_BRACE, "{",
+                         startLine, startColumn);
 
         case '}':
-            return Token(TokenType::RIGHT_BRACE, "}", startLine, startColumn);
+            return Token(TokenType::RIGHT_BRACE, "}",
+                         startLine, startColumn);
 
         case ';':
-            return Token(TokenType::SEMICOLON, ";", startLine, startColumn);
+            return Token(TokenType::SEMICOLON, ";",
+                         startLine, startColumn);
 
         case ',':
-            return Token(TokenType::COMMA, ",", startLine, startColumn);
-
-        default:
-            return Token(
-                TokenType::INVALID,
-                std::string(1, c),
-                startLine,
-                startColumn
-            );
+            return Token(TokenType::COMMA, ",",
+                         startLine, startColumn);
     }
+
+    return Token(
+        TokenType::INVALID,
+        std::string(1, c),
+        startLine,
+        startColumn
+    );
 }
 
-std::vector<Token> Lexer::tokenize() {
-
+std::vector<Token> Lexer::tokenize()
+{
     std::vector<Token> tokens;
 
-    while (currentChar() != '\0') {
+    while (peek() != '\0')
+    {
+        skipWhitespaceAndComments();
 
-        skipWhitespace();
-
-        if (currentChar() == '\0') {
+        if (peek() == '\0')
             break;
-        }
 
-        // Comments
-        if (currentChar() == '/' &&
-            position + 1 < source.length() &&
-            (source[position + 1] == '/' ||
-             source[position + 1] == '*')) {
+        int startLine = line;
+        int startColumn = column;
 
-            skipComment();
-            continue;
-        }
+        char c = peek();
 
-        // Identifier / keyword
-        if (std::isalpha(static_cast<unsigned char>(currentChar())) ||
-            currentChar() == '_') {
-
+        if (isalpha(c) || c == '_')
+        {
             tokens.push_back(scanIdentifierOrKeyword());
-            continue;
         }
-
-        // Number
-        if (std::isdigit(static_cast<unsigned char>(currentChar()))) {
-
+        else if (isdigit(c))
+        {
             tokens.push_back(scanNumber());
-            continue;
         }
-
-        // String
-        if (currentChar() == '"') {
-
+        else if (c == '"')
+        {
             tokens.push_back(scanString());
-            continue;
         }
-
-        // Character
-        if (currentChar() == '\'') {
-
-            tokens.push_back(scanCharacter());
-            continue;
+        else if (c == '\'')
+        {
+            tokens.push_back(scanChar());
         }
-
-        // Operator / delimiter
-        tokens.push_back(scanOperatorOrDelimiter());
+        else
+        {
+            tokens.push_back(scanOperatorOrDelimiter());
+        }
     }
 
-    tokens.emplace_back(
-        TokenType::END_OF_FILE,
-        "EOF",
-        line,
-        column
+    tokens.push_back(
+        Token(
+            TokenType::END_OF_FILE,
+            "",
+            line,
+            column
+        )
     );
 
     return tokens;
 }
 
-std::string tokenTypeToString(TokenType type) {
-
-    switch (type) {
-
+std::string tokenTypeToString(TokenType type)
+{
+    switch (type)
+    {
         case TokenType::BREW: return "BREW";
         case TokenType::SERVE: return "SERVE";
         case TokenType::SIP: return "SIP";
@@ -515,11 +426,7 @@ std::string tokenTypeToString(TokenType type) {
         case TokenType::ELSE: return "ELSE";
         case TokenType::WHILE: return "WHILE";
         case TokenType::RETURN: return "RETURN";
-
-        case TokenType::HOT:
-        case TokenType::COLD:
-        case TokenType::BOOLEAN_LITERAL:
-            return "BOOLEAN_LITERAL";
+        case TokenType::BOOLEAN_LITERAL: return "BOOLEAN_LITERAL";
 
         case TokenType::INT_TYPE: return "INT_TYPE";
         case TokenType::FLOAT_TYPE: return "FLOAT_TYPE";
@@ -538,7 +445,6 @@ std::string tokenTypeToString(TokenType type) {
         case TokenType::MULTIPLY: return "MULTIPLY";
         case TokenType::DIVIDE: return "DIVIDE";
         case TokenType::MODULO: return "MODULO";
-
         case TokenType::ASSIGN: return "ASSIGN";
         case TokenType::EQUAL: return "EQUAL";
         case TokenType::NOT_EQUAL: return "NOT_EQUAL";
@@ -546,11 +452,9 @@ std::string tokenTypeToString(TokenType type) {
         case TokenType::GREATER: return "GREATER";
         case TokenType::LESS_EQUAL: return "LESS_EQUAL";
         case TokenType::GREATER_EQUAL: return "GREATER_EQUAL";
-
         case TokenType::AND: return "AND";
         case TokenType::OR: return "OR";
         case TokenType::NOT: return "NOT";
-
         case TokenType::INCREMENT: return "INCREMENT";
         case TokenType::DECREMENT: return "DECREMENT";
 

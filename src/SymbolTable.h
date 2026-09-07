@@ -4,13 +4,15 @@
 #include <string>
 #include <vector>
 
-struct Symbol {
+struct Symbol
+{
     std::string name;
     std::string kind;
     int line;
 };
 
-class SymbolTable {
+class SymbolTable
+{
 private:
     std::vector<Symbol> symbols;
 
@@ -21,7 +23,9 @@ public:
         int line
     );
 
-    bool contains(const std::string& name) const;
+    bool contains(
+        const std::string& name
+    ) const;
 
     void print() const;
 };

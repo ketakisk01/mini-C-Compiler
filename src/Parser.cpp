@@ -203,6 +203,7 @@ ASTPtr Parser::parseDeclaration()
     );
 
     // Optional data type
+    std::string declaredType = "";
     if (check(TokenType::INT_TYPE) ||
         check(TokenType::FLOAT_TYPE) ||
         check(TokenType::CHAR_TYPE) ||
@@ -210,6 +211,7 @@ ASTPtr Parser::parseDeclaration()
         check(TokenType::STRING_TYPE))
     {
         Token typeToken = tokens[current++];
+        declaredType = typeToken.lexeme;
 
         node->addChild(
             std::make_shared<ParseTreeNode>(
@@ -261,10 +263,13 @@ ASTPtr Parser::parseDeclaration()
 
     lastTreeNode = node;
 
-    return std::make_shared<DeclarationNode>(
+    auto declNode = std::make_shared<DeclarationNode>(
         name.lexeme,
-        initializer
+        initializer,
+        declaredType
     );
+    declNode->line = brew.line;
+    return declNode;
 }
 
 
@@ -316,10 +321,12 @@ ASTPtr Parser::parseAssignment()
 
     lastTreeNode = node;
 
-    return std::make_shared<AssignmentNode>(
+    auto assignNode = std::make_shared<AssignmentNode>(
         name.lexeme,
         expression
     );
+    assignNode->line = name.line;
+    return assignNode;
 }
 
 
@@ -334,7 +341,7 @@ ASTPtr Parser::parseIf()
             "IfStatement"
         );
 
-    consume(
+    Token ifToken = consume(
         TokenType::IF,
         "Expected 'if'"
     );
@@ -387,11 +394,13 @@ ASTPtr Parser::parseIf()
 
     lastTreeNode = node;
 
-    return std::make_shared<IfNode>(
+    auto ifNode = std::make_shared<IfNode>(
         condition,
         thenBranch,
         elseBranch
     );
+    ifNode->line = ifToken.line;
+    return ifNode;
 }
 
 
@@ -406,7 +415,7 @@ ASTPtr Parser::parseWhile()
             "WhileStatement"
         );
 
-    consume(
+    Token whileToken = consume(
         TokenType::WHILE,
         "Expected 'while'"
     );
@@ -445,10 +454,12 @@ ASTPtr Parser::parseWhile()
 
     lastTreeNode = node;
 
-    return std::make_shared<WhileNode>(
+    auto whileNode = std::make_shared<WhileNode>(
         condition,
         body
     );
+    whileNode->line = whileToken.line;
+    return whileNode;
 }
 
 
@@ -463,7 +474,7 @@ ASTPtr Parser::parseServe()
             "ServeStatement"
         );
 
-    consume(
+    Token serveToken = consume(
         TokenType::SERVE,
         "Expected 'serve'"
     );
@@ -506,9 +517,11 @@ ASTPtr Parser::parseServe()
 
     lastTreeNode = node;
 
-    return std::make_shared<ServeNode>(
+    auto serveNode = std::make_shared<ServeNode>(
         expression
     );
+    serveNode->line = serveToken.line;
+    return serveNode;
 }
 
 
@@ -523,7 +536,7 @@ ASTPtr Parser::parseSip()
             "SipStatement"
         );
 
-    consume(
+    Token sipToken = consume(
         TokenType::SIP,
         "Expected 'sip'"
     );
@@ -573,9 +586,11 @@ ASTPtr Parser::parseSip()
 
     lastTreeNode = node;
 
-    return std::make_shared<SipNode>(
+    auto sipNode = std::make_shared<SipNode>(
         name.lexeme
     );
+    sipNode->line = sipToken.line;
+    return sipNode;
 }
 
 
@@ -590,7 +605,7 @@ ASTPtr Parser::parseReturn()
             "ReturnStatement"
         );
 
-    consume(
+    Token returnToken = consume(
         TokenType::RETURN,
         "Expected 'return'"
     );
@@ -620,9 +635,11 @@ ASTPtr Parser::parseReturn()
 
     lastTreeNode = node;
 
-    return std::make_shared<ReturnNode>(
+    auto retNode = std::make_shared<ReturnNode>(
         expression
     );
+    retNode->line = returnToken.line;
+    return retNode;
 }
 
 
@@ -741,6 +758,7 @@ ASTPtr Parser::parseLogicalOr()
                 expression,
                 right
             );
+        expression->line = op.line;
     }
 
     lastTreeNode = node;
@@ -792,6 +810,7 @@ ASTPtr Parser::parseLogicalAnd()
                 expression,
                 right
             );
+        expression->line = op.line;
     }
 
     lastTreeNode = node;
@@ -846,6 +865,7 @@ ASTPtr Parser::parseEquality()
                 expression,
                 right
             );
+        expression->line = op.line;
     }
 
     lastTreeNode = node;
@@ -902,6 +922,7 @@ ASTPtr Parser::parseComparison()
                 expression,
                 right
             );
+        expression->line = op.line;
     }
 
     lastTreeNode = node;
@@ -956,6 +977,7 @@ ASTPtr Parser::parseTerm()
                 expression,
                 right
             );
+        expression->line = op.line;
     }
 
     lastTreeNode = node;
@@ -1009,6 +1031,7 @@ ASTPtr Parser::parseFactor()
                 expression,
                 right
             );
+        expression->line = op.line;
     }
 
     lastTreeNode = node;
@@ -1047,10 +1070,12 @@ ASTPtr Parser::parseUnary()
 
         lastTreeNode = node;
 
-        return std::make_shared<UnaryExpressionNode>(
+        auto unNode = std::make_shared<UnaryExpressionNode>(
             op.lexeme,
             operand
         );
+        unNode->line = op.line;
+        return unNode;
     }
 
     ASTPtr primary =
@@ -1080,6 +1105,14 @@ ASTPtr Parser::parsePrimary()
         match(TokenType::BOOLEAN_LITERAL)
     )
     {
+        TokenType litType = previous().type;
+        std::string t = "unknown";
+        if (litType == TokenType::INTEGER_LITERAL) t = "int";
+        else if (litType == TokenType::FLOAT_LITERAL) t = "float";
+        else if (litType == TokenType::CHAR_LITERAL) t = "char";
+        else if (litType == TokenType::STRING_LITERAL) t = "string";
+        else if (litType == TokenType::BOOLEAN_LITERAL) t = "bool";
+
         node->addChild(
             std::make_shared<ParseTreeNode>(
                 "Literal: " +
@@ -1089,9 +1122,12 @@ ASTPtr Parser::parsePrimary()
 
         lastTreeNode = node;
 
-        return std::make_shared<LiteralNode>(
-            previous().lexeme
+        auto litNode = std::make_shared<LiteralNode>(
+            previous().lexeme,
+            t
         );
+        litNode->line = previous().line;
+        return litNode;
     }
 
     if (match(TokenType::IDENTIFIER))
@@ -1105,9 +1141,11 @@ ASTPtr Parser::parsePrimary()
 
         lastTreeNode = node;
 
-        return std::make_shared<IdentifierNode>(
+        auto idNode = std::make_shared<IdentifierNode>(
             previous().lexeme
         );
+        idNode->line = previous().line;
+        return idNode;
     }
 
     if (match(TokenType::LEFT_PAREN))

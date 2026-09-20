@@ -1,10 +1,13 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <string>
 
 #include "Lexer.h"
 #include "Parser.h"
 #include "SymbolTable.h"
+#include "SemanticAnalyzer.h"
 
 using namespace std;
 
@@ -22,7 +25,7 @@ int main(int argc, char* argv[])
 
     if (!file)
     {
-        cerr << "Error: Cannot open source file.\n";
+        cerr << "Error: Cannot open source file: " << argv[1] << "\n";
         return 1;
     }
 
@@ -98,6 +101,15 @@ int main(int argc, char* argv[])
 
     parser.printParseTree();
 
+
+    // 7. SEMANTIC ANALYSIS
+    SemanticAnalyzer semanticAnalyzer(symbolTable);
+    bool semanticPassed = semanticAnalyzer.analyze(program);
+
+    if (!semanticPassed)
+    {
+        return 1;
+    }
 
     return 0;
 }

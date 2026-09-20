@@ -15,6 +15,8 @@ inline void printIndent(int indent)
 class ASTNode
 {
 public:
+    int line = 0;
+
     virtual ~ASTNode() = default;
 
     virtual void print(int indent = 0) const = 0;
@@ -62,9 +64,10 @@ class LiteralNode : public ASTNode
 {
 public:
     std::string value;
+    std::string literalType;
 
-    LiteralNode(const std::string& value)
-        : value(value)
+    LiteralNode(const std::string& value, const std::string& literalType = "")
+        : value(value), literalType(literalType)
     {
     }
 
@@ -95,14 +98,17 @@ public:
 class DeclarationNode : public ASTNode
 {
 public:
+    std::string type;
     std::string name;
     ASTPtr initializer;
 
     DeclarationNode(
         const std::string& name,
-        ASTPtr initializer
+        ASTPtr initializer,
+        const std::string& type = ""
     )
-        : name(name),
+        : type(type),
+          name(name),
           initializer(initializer)
     {
     }
@@ -110,7 +116,10 @@ public:
     void print(int indent = 0) const override
     {
         printIndent(indent);
-        std::cout << "Declaration: " << name << "\n";
+        std::cout << "Declaration: ";
+        if (!type.empty())
+            std::cout << type << " ";
+        std::cout << name << "\n";
 
         if (initializer)
             initializer->print(indent + 1);

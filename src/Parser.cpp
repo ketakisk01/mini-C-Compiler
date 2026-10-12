@@ -96,6 +96,7 @@ void Parser::syntaxError(
     const std::string& message
 )
 {
+    errorCount++;
     std::cerr
         << "Syntax Error at line "
         << peek().line
@@ -1090,7 +1091,8 @@ ASTPtr Parser::parsePrimary()
         lastTreeNode = node;
 
         return std::make_shared<LiteralNode>(
-            previous().lexeme
+            previous().lexeme,
+            previous().type
         );
     }
 

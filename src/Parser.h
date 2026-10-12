@@ -46,6 +46,7 @@ private:
     size_t current;
 
     SymbolTable& symbolTable;
+    int errorCount = 0;
 
     ParseTreePtr parseTreeRoot;
 
@@ -101,6 +102,8 @@ public:
     std::shared_ptr<ProgramNode> parse();
 
     void printParseTree() const;
+    bool hasErrors() const { return errorCount > 0; }
+    int getErrorCount() const { return errorCount; }
 };
 
 #endif

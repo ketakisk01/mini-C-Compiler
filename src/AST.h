@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "Token.h"
 
 inline void printIndent(int indent)
 {
@@ -64,10 +65,10 @@ class LiteralNode : public ASTNode
 {
 public:
     std::string value;
-    std::string literalType;
+    TokenType type;
 
-    LiteralNode(const std::string& value, const std::string& literalType = "")
-        : value(value), literalType(literalType)
+    LiteralNode(const std::string& value)
+        : value(value)
     {
     }
 

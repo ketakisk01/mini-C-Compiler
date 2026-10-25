@@ -288,9 +288,9 @@ std::string SemanticAnalyzer::deduceLiteralType(const std::string& value) const
 {
     if (value == "hot" || value == "cold")
         return "bool";
-    if (value.front() == '"' || value.back() == '"')
+    if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
         return "string";
-    if (value.front() == '\'' || value.back() == '\'')
+    if (value.size() >= 2 && value.front() == '\'' && value.back() == '\'')
         return "char";
     if (value.find('.') != std::string::npos)
         return "float";

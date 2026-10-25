@@ -164,6 +164,9 @@ ASTPtr Parser::parseStatement()
     if (check(TokenType::LEFT_BRACE))
         return parseBlock();
 
+    if (check(TokenType::INCREMENT) || check(TokenType::DECREMENT))
+        return parseIncDecStatement();
+
     if (check(TokenType::IDENTIFIER))
         return parseAssignment();
 
@@ -173,7 +176,8 @@ ASTPtr Parser::parseStatement()
         "'"
     );
 
-    current++;
+    if (!check(TokenType::END_OF_FILE))
+        current++;
     lastTreeNode = nullptr;
 
     return nullptr;
@@ -297,6 +301,17 @@ ASTPtr Parser::parseAssignment()
         )
     );
 
+    // Postfix form:  i++;  /  i--;
+    if (check(TokenType::INCREMENT) || check(TokenType::DECREMENT))
+    {
+        Token op = tokens[current++];
+        node->addChild(std::make_shared<ParseTreeNode>(op.lexeme));
+        consume(TokenType::SEMICOLON, "Expected ';' after statement");
+        node->addChild(std::make_shared<ParseTreeNode>(";"));
+        lastTreeNode = node;
+        return makeIncDec(name, op);
+    }
+
     consume(
         TokenType::ASSIGN,
         "Expected '=' after identifier"
@@ -330,6 +345,48 @@ ASTPtr Parser::parseAssignment()
     return assignNode;
 }
 
+
+
+// =====================================================
+// ++x; / --x; / x++; / x--;  (desugared to x = x +/- 1)
+// =====================================================
+
+ASTPtr Parser::makeIncDec(const Token& name, const Token& op)
+{
+    auto id = std::make_shared<IdentifierNode>(name.lexeme);
+    id->line = name.line;
+
+    auto one = std::make_shared<LiteralNode>("1", TokenType::INTEGER_LITERAL);
+
+    auto bin = std::make_shared<BinaryExpressionNode>(
+        op.type == TokenType::INCREMENT ? "+" : "-",
+        id,
+        one
+    );
+    bin->line = op.line;
+
+    auto assign = std::make_shared<AssignmentNode>(name.lexeme, bin);
+    assign->line = name.line;
+    return assign;
+}
+
+ASTPtr Parser::parseIncDecStatement()
+{
+    auto node = std::make_shared<ParseTreeNode>("IncDecStatement");
+
+    Token op = tokens[current++];
+    node->addChild(std::make_shared<ParseTreeNode>(op.lexeme));
+
+    Token name = consume(TokenType::IDENTIFIER,
+                         "Expected variable after '" + op.lexeme + "'");
+    node->addChild(std::make_shared<ParseTreeNode>("Identifier: " + name.lexeme));
+
+    consume(TokenType::SEMICOLON, "Expected ';' after statement");
+    node->addChild(std::make_shared<ParseTreeNode>(";"));
+
+    lastTreeNode = node;
+    return makeIncDec(name, op);
+}
 
 // =====================================================
 // IF
@@ -1127,8 +1184,22 @@ ASTPtr Parser::parsePrimary()
             previous().lexeme,
             previous().type
         );
-        litNode->line = previous().line;
-        return litNode;
+    }
+
+    if (match(TokenType::HOT) || match(TokenType::COLD))
+    {
+        node->addChild(
+            std::make_shared<ParseTreeNode>(
+                "Literal: " + previous().lexeme
+            )
+        );
+
+        lastTreeNode = node;
+
+        return std::make_shared<LiteralNode>(
+            previous().lexeme,
+            TokenType::BOOLEAN_LITERAL
+        );
     }
 
     if (match(TokenType::IDENTIFIER))
@@ -1178,7 +1249,8 @@ ASTPtr Parser::parsePrimary()
         "Expected expression"
     );
 
-    current++;
+    // Do NOT consume the bad token here: statement-level recovery
+    // handles it, and consuming it can run past END_OF_FILE.
 
     node->addChild(
         std::make_shared<ParseTreeNode>(

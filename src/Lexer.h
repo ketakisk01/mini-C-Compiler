@@ -14,6 +14,10 @@ private:
     int line;
     int column;
 
+    // Set when a /* ... */ comment is never closed
+    int unterminatedCommentLine = 0;
+    int unterminatedCommentColumn = 0;
+
     char peek();
     char peekNext();
     char advance();

@@ -66,10 +66,23 @@ class LiteralNode : public ASTNode
 public:
     std::string value;
     TokenType type;
+    std::string literalType;
 
-    LiteralNode(const std::string& value)
-        : value(value)
+    LiteralNode(const std::string& value, TokenType type = TokenType::INVALID)
+        : value(value),
+          type(type),
+          literalType()
     {
+        if (type == TokenType::INTEGER_LITERAL)
+            literalType = "int";
+        else if (type == TokenType::FLOAT_LITERAL)
+            literalType = "float";
+        else if (type == TokenType::CHAR_LITERAL)
+            literalType = "char";
+        else if (type == TokenType::STRING_LITERAL)
+            literalType = "string";
+        else if (type == TokenType::BOOLEAN_LITERAL)
+            literalType = "bool";
     }
 
     void print(int indent = 0) const override

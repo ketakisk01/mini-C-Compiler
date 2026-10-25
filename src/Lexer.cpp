@@ -12,8 +12,8 @@ static const std::unordered_map<std::string, TokenType> keywords =
     {"else", TokenType::ELSE},
     {"while", TokenType::WHILE},
     {"return", TokenType::RETURN},
-    {"hot", TokenType::BOOLEAN_LITERAL},
-    {"cold", TokenType::BOOLEAN_LITERAL},
+    {"hot", TokenType::HOT},
+    {"cold", TokenType::COLD},
 
     {"int", TokenType::INT_TYPE},
     {"float", TokenType::FLOAT_TYPE},
@@ -72,7 +72,7 @@ void Lexer::skipWhitespaceAndComments()
 {
     while (true)
     {
-        while (isspace(peek()))
+        while (isspace(static_cast<unsigned char>(peek())))
             advance();
 
         // Single-line comment
@@ -87,6 +87,8 @@ void Lexer::skipWhitespaceAndComments()
         // Multi-line comment
         if (peek() == '/' && peekNext() == '*')
         {
+            int cLine = line;
+            int cCol = column;
             advance();
             advance();
 
@@ -100,6 +102,12 @@ void Lexer::skipWhitespaceAndComments()
             {
                 advance();
                 advance();
+            }
+            else
+            {
+                unterminatedCommentLine = cLine;
+                unterminatedCommentColumn = cCol;
+                return;
             }
 
             continue;
@@ -116,7 +124,7 @@ Token Lexer::scanIdentifierOrKeyword()
 
     std::string text;
 
-    while (isalnum(peek()) || peek() == '_')
+    while (isalnum(static_cast<unsigned char>(peek())) || peek() == '_')
         text += advance();
 
     auto it = keywords.find(text);
@@ -147,15 +155,15 @@ Token Lexer::scanNumber()
     std::string number;
     bool isFloat = false;
 
-    while (isdigit(peek()))
+    while (isdigit(static_cast<unsigned char>(peek())))
         number += advance();
 
-    if (peek() == '.' && isdigit(peekNext()))
+    if (peek() == '.' && isdigit(static_cast<unsigned char>(peekNext())))
     {
         isFloat = true;
         number += advance();
 
-        while (isdigit(peek()))
+        while (isdigit(static_cast<unsigned char>(peek())))
             number += advance();
     }
 
@@ -373,19 +381,25 @@ std::vector<Token> Lexer::tokenize()
     {
         skipWhitespaceAndComments();
 
+        if (unterminatedCommentLine != 0)
+        {
+            tokens.push_back(Token(TokenType::INVALID, "/*",
+                                   unterminatedCommentLine,
+                                   unterminatedCommentColumn));
+            break;
+        }
+
         if (peek() == '\0')
             break;
 
-        int startLine = line;
-        int startColumn = column;
 
         char c = peek();
 
-        if (isalpha(c) || c == '_')
+        if (isalpha(static_cast<unsigned char>(c)) || c == '_')
         {
             tokens.push_back(scanIdentifierOrKeyword());
         }
-        else if (isdigit(c))
+        else if (isdigit(static_cast<unsigned char>(c)))
         {
             tokens.push_back(scanNumber());
         }
@@ -419,6 +433,8 @@ std::string tokenTypeToString(TokenType type)
 {
     switch (type)
     {
+        case TokenType::HOT: // fall through
+        case TokenType::COLD: return "BOOLEAN_LITERAL";
         case TokenType::BREW: return "BREW";
         case TokenType::SERVE: return "SERVE";
         case TokenType::SIP: return "SIP";

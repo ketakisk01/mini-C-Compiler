@@ -75,6 +75,8 @@ private:
 
     ASTPtr parseDeclaration();
     ASTPtr parseAssignment();
+    ASTPtr parseIncDecStatement();
+    ASTPtr makeIncDec(const Token& name, const Token& op);
     ASTPtr parseIf();
     ASTPtr parseWhile();
     ASTPtr parseServe();

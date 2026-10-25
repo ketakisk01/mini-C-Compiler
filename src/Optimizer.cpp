@@ -41,9 +41,9 @@ long long Optimizer::parseInteger(const std::string& str) const
 
 bool Optimizer::isTemp(const std::string& str) const
 {
-    if (str.length() >= 2 && str[0] == 't')
+    if (str.length() >= 3 && str[0] == '$' && str[1] == 't')
     {
-        for (size_t i = 1; i < str.length(); ++i)
+        for (size_t i = 2; i < str.length(); ++i)
         {
             if (!isdigit(static_cast<unsigned char>(str[i])))
                 return false;

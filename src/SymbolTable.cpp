@@ -42,33 +42,14 @@ bool SymbolTable::addSymbol(
     int scopeLevel
 )
 {
+    // Simple insertion without duplicate checks
     Symbol sym(name, kind, line, type, scopeLevel);
-
     if (scopeStack.empty())
-    {
         scopeStack.push_back({});
-    }
-
-    // Insert or update in current scope
+    // Insert into current scope
     scopeStack.back()[name] = sym;
-
-    // Record in sequential list for table printing
-    bool existsInSymbols = false;
-    for (auto& s : symbols)
-    {
-        if (s.name == name && s.scopeLevel == scopeLevel)
-        {
-            s = sym;
-            existsInSymbols = true;
-            break;
-        }
-    }
-
-    if (!existsInSymbols)
-    {
-        symbols.push_back(sym);
-    }
-
+    // Record symbol for printing
+    symbols.push_back(sym);
     return true;
 }
 
@@ -136,13 +117,15 @@ void SymbolTable::clear()
 void SymbolTable::print() const
 {
     std::cout << "\n========== SYMBOL TABLE ==========\n";
-    std::cout << "Name\tKind\tLine\n";
+    std::cout << "Name\tType\tKind\tScope\tLine\n";
 
     for (const auto& symbol : symbols)
     {
         std::cout
             << symbol.name << "\t"
+            << symbol.type << "\t"
             << symbol.kind << "\t"
+            << symbol.scopeLevel << "\t"
             << symbol.line << "\n";
     }
 

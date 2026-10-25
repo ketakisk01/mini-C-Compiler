@@ -9,15 +9,17 @@ Source Code (.mc)
        ↓
 [Phase 1] Lexical Analyzer (Lexer) -> Token Stream + Lexical Error Reporting
        ↓
-[Phase 2] Syntax Analyzer (Parser) -> Recursive-Descent Parsing + Parse Tree & AST
+[Phase 2] Syntax Analyzer (Parser) -> Recursive-Descent AST Construction
        ↓
-[Phase 3] Symbol Table -> Identifier, Scope, and Line Tracking
+[Phase 3] Semantic Analyzer (SemanticAnalyzer) -> Type Checking, Scope Validation, Semantic Error Reporting
        ↓
-[Phase 4] Intermediate Code Generator (IR) -> Three-Address Code (TAC)
+[Phase 4] Symbol Table -> Identifier, Scope, and Line Tracking
        ↓
-[Phase 5] Code Optimizer -> Multi-Pass Constant Folding, Propagation, Algebraic Simplification & DCE
+[Phase 5] Intermediate Code Generator (IR) -> Three-Address Code (TAC)
        ↓
-[Phase 6] Assembly Code Generator -> Target x86 (IA-32 GAS) Assembly (.s)
+[Phase 6] Code Optimizer -> Constant Folding, Propagation, Algebraic Simplification, DCE
+       ↓
+[Phase 7] Assembly Code Generator -> Target x86 (IA-32 GAS) Assembly (.s)
        ↓
 Target Assembler (GCC / MinGW) -> Executable (.exe)
 ```
@@ -52,48 +54,31 @@ Target Assembler (GCC / MinGW) -> Executable (.exe)
 - Identifies keywords, identifiers, integer/float/char/string/boolean literals, operators, and delimiters.
 
 ### Phase 2: Syntax Analysis (`Parser.h`, `Parser.cpp`, `AST.h`)
-- Implements LL(1)-compatible recursive descent parsing.
+- Implements recursive descent parsing.
 - Handles operator precedence via cascading grammar rules.
-- Builds both a detailed **Parse Tree** (`ParseTreeNode`) and an **Abstract Syntax Tree (AST)** (`ASTNode` hierarchy).
-- Gracefully handles syntax errors, reports line/column context, and prevents code generation on invalid code.
+- Builds an AST (`ASTNode` hierarchy) and parse tree for debugging.
+- Reports syntax errors and aborts when invalid code is encountered.
 
-### Phase 3: Symbol Table (`SymbolTable.h`, `SymbolTable.cpp`)
+### Phase 3: Semantic Analysis (`SemanticAnalyzer.h`, `SemanticAnalyzer.cpp`)
+- Validates declarations, duplicate names, type mismatches, and undeclared symbols.
+- Checks assignment compatibility and boolean/numeric conditions in `if`/`while`.
+- Stops compilation when semantic errors are found.
+
+### Phase 4: Symbol Table (`SymbolTable.h`, `SymbolTable.cpp`)
 - Tracks declared variables, kinds, and declaration lines.
+- Maintains scope-aware symbol lookup for semantic validation.
 
-### Phase 4: Intermediate Code Generation (`TAC.h`, `TAC.cpp`, `IRGenerator.h`, `IRGenerator.cpp`)
-- Translates AST into linear **Three-Address Code (TAC)**.
-- Operates on instruction forms:
-  - Binary arithmetic/relational/logical: `t = a OP b`
-  - Unary operations: `t = - a`, `t = ! a`
-  - Copies: `x = y`
-  - Branching: `ifFalse t goto L`, `if t goto L`, `goto L`
-  - Labels: `L:`
-  - Built-ins: `serve "str"`, `serve x`, `sip x`, `return x`
-- Generates clean, human-readable intermediate representations.
+### Phase 5: Intermediate Code Generation (`TAC.h`, `TAC.cpp`, `IRGenerator.h`, `IRGenerator.cpp`)
+- Translates AST into linear Three-Address Code (TAC).
+- Produces arithmetic, comparison, branch, and I/O instructions used by the optimizer/code generator.
 
-### Phase 5: Code Optimization (`Optimizer.h`, `Optimizer.cpp`)
-Operates directly on TAC instructions using a multi-pass fixpoint loop:
-1. **Constant Folding**: Evaluates compile-time expressions (arithmetic, comparisons, logical operations, unary negations).
-2. **Constant Propagation**: Tracks constant bindings within basic blocks and propagates them into operand positions.
-3. **Algebraic Simplification**: Eliminates arithmetic identities (`x + 0 -> x`, `x - 0 -> x`, `x * 1 -> x`, `x * 0 -> 0`, `x / 1 -> x`).
-4. **Dead Code Elimination (DCE)**:
-   - Removes unused temporary variables (`tN`).
-   - Eliminates dead instructions after unconditional jumps (`goto`, `return`).
-   - Resolves branches with known boolean conditions (`ifFalse 0 -> goto`, `ifFalse 1 -> removed`).
-   - Removes redundant jumps (`goto L` immediately followed by `L:`).
-- Displays intermediate code before and after optimization along with optimization metrics.
+### Phase 6: Code Optimization (`Optimizer.h`, `Optimizer.cpp`)
+- Performs constant folding, constant propagation, algebraic simplification, and dead-code elimination on TAC.
+- Produces optimized intermediate code before final assembly emission.
 
-### Phase 6: Target Assembly Generation (`CodeGenerator.h`, `CodeGenerator.cpp`)
-- Generates **x86 (IA-32) standard GNU Assembler (GAS)** syntax compatible with MinGW GCC on Windows.
-- **Stack-Frame Strategy**:
-  - Dynamic 16-byte aligned stack allocation (`subl $N, %esp`).
-  - Base pointer relative offsets (`-4(%ebp)`, `-8(%ebp)`, ...) for all variables and temporaries.
-- **Data Section**:
-  - Read-only data `.section .rdata,"dr"` for format strings and user string literals.
-- **Instruction Mapping**:
-  - Arithmetic and logic mapped to `movl`, `addl`, `subl`, `imull`, `idivl`, `cmpl`, `sete`/`setne`/`setl`/`setle`/`setg`/`setge`.
-  - Jump instructions mapped to `jmp`, `je`, `jne`.
-  - Built-ins mapped to standard C runtime calls (`_puts`, `_printf`, `_scanf`).
+### Phase 7: Target Assembly Generation (`CodeGenerator.h`, `CodeGenerator.cpp`)
+- Generates x86 (IA-32) GNU Assembler (GAS) syntax.
+- Emits stack-based code for variables and temporaries and supports `serve`, `sip`, and simple control flow.
 - Writes final assembly output to `.s` file.
 
 ---
@@ -103,24 +88,28 @@ Operates directly on TAC instructions using a multi-pass fixpoint loop:
 ```text
 MiniCCompiler/
 ├── src/
-│   ├── main.cpp                 # CLI Compiler Driver (orchestrates pipeline)
+│   ├── main.cpp                 # Compiler driver and full pipeline orchestration
 │   ├── Token.h                  # Token definitions & TokenType enum
 │   ├── Lexer.h / Lexer.cpp      # Phase 1: Lexical scanner
 │   ├── AST.h                    # AST node hierarchy definitions
 │   ├── Parser.h / Parser.cpp    # Phase 2: Recursive Descent Parser
-│   ├── SymbolTable.h / .cpp     # Phase 3: Scoped Symbol Table
-│   ├── TAC.h / TAC.cpp          # Phase 4: Three-Address Code structures
-│   ├── IRGenerator.h / .cpp     # Phase 4: AST-to-TAC IR Generator
-│   ├── Optimizer.h / .cpp       # Phase 5: TAC Multi-pass Optimizer
-│   └── CodeGenerator.h / .cpp   # Phase 6: x86 Target Assembly Generator
+│   ├── SymbolTable.h / .cpp     # Scope-aware symbol table
+│   ├── SemanticAnalyzer.h / .cpp  # Phase 3: Semantic validation
+│   ├── TAC.h / TAC.cpp          # Phase 5: Three-Address Code structures
+│   ├── IRGenerator.h / .cpp     # Phase 5: AST-to-TAC generator
+│   ├── Optimizer.h / .cpp       # Phase 6: TAC optimizer
+│   ├── CodeGenerator.h / .cpp   # Phase 7: x86 assembly generator
+│   └── README doc references
 ├── examples/
-│   ├── valid_program.mc         # Control flow, loops, and string serve
-│   ├── arithmetic_and_precedence.mc # Precedence, binary arithmetic expressions
-│   ├── optimizations.mc         # Constant folding, propagation, algebraic simplification
-│   ├── control_flow.mc          # Nested conditionals and while iteration
-│   ├── lexical_error.mc         # Error test: invalid characters
-│   └── syntax_error.mc          # Error test: malformed syntax
-└── README.md                    # Project documentation
+│   ├── valid_program.mc
+│   ├── arithmetic_and_precedence.mc
+│   ├── optimizations.mc
+│   ├── control_flow.mc
+│   ├── lexical_error.mc
+│   ├── syntax_error.mc
+│   ├── semantic_*.mc
+│   └── *.s
+└── README.md
 ```
 
 ---
@@ -132,7 +121,7 @@ MiniCCompiler/
 
 ### 1. Build the Compiler
 ```bash
-g++ -std=c++14 -o MiniCCompiler src/main.cpp src/Lexer.cpp src/Parser.cpp src/SymbolTable.cpp src/TAC.cpp src/IRGenerator.cpp src/Optimizer.cpp src/CodeGenerator.cpp
+g++ -std=c++14 -o MiniCCompiler src/main.cpp src/Lexer.cpp src/Parser.cpp src/SymbolTable.cpp src/SemanticAnalyzer.cpp src/TAC.cpp src/IRGenerator.cpp src/Optimizer.cpp src/CodeGenerator.cpp
 ```
 
 ### 2. Compile a Mini C Source File
@@ -186,4 +175,4 @@ z = 60
 w = 60
 zero = 0
 ```
-*(All temporary variables `t0`–`t4` eliminated, expressions folded and propagated)*
+*(Temporaries are removed when they are no longer necessary and arithmetic is folded or simplified.)*

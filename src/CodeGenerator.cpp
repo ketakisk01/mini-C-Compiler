@@ -59,6 +59,16 @@ std::string CodeGenerator::generateAssembly(const TACProgram& prog, const std::s
     std::ostringstream rodata;
     std::ostringstream text;
 
+    bool hasExplicitReturn = false;
+    for (const auto& inst : prog.instructions)
+    {
+        if (inst.op == TACOp::RETURN)
+        {
+            hasExplicitReturn = true;
+            break;
+        }
+    }
+
     // 1. Identify string literals
     for (const auto& inst : prog.instructions)
     {
@@ -284,10 +294,12 @@ std::string CodeGenerator::generateAssembly(const TACProgram& prog, const std::s
         }
     }
 
-    // Function Epilogue
-    text << "    xorl    %eax, %eax\n";
-    text << "    leave\n";
-    text << "    ret\n";
+    if (!hasExplicitReturn)
+    {
+        text << "    xorl    %eax, %eax\n";
+        text << "    leave\n";
+        text << "    ret\n";
+    }
 
     return rodata.str() + "\n" + text.str();
 }
